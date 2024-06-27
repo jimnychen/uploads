@@ -1,15 +1,24 @@
-# Use a base image that supports systemd, for example, Ubuntu
-FROM ubuntu:20.04
+FROM bmoorman/ubuntu:jammy
 
-# Install necessary packages
-RUN apt-get update && \
-apt-get install -y shellinabox && \
-apt-get install -y systemd && \
-apt-get clean && \
-rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-RUN echo 'root:root' | chpasswd
-# Expose the web-based terminal port
-EXPOSE 4200
+ARG DEBIAN_FRONTEND=noninteractive \
+    GEYSER_PORT=19132/udp
 
-# Start shellinabox
-CMD ["/usr/bin/shellinaboxd", "-t", "-s", "/:LOGIN"]
+WORKDIR /var/lib/geyser
+
+RUN apt-get update \
+ && apt-get install --yes --no-install-recommends \
+    openjdk-17-jre-headless \
+    vim \
+    wget \
+ && wget --quiet --directory-prefix /opt/geyser "https://ci.geysermc.org/job/GeyserMC/job/Geyser/job/master/lastSuccessfulBuild/artifact/bootstrap/standalone/build/libs/Geyser-Standalone.jar" \
+ && apt-get autoremove --yes --purge \
+ && apt-get clean \
+ && rm --recursive --force /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY geyser/ /etc/geyser/
+
+VOLUME /var/lib/geyser
+
+EXPOSE ${GEYSER_PORT}
+
+CMD ["/etc/geyser/start.sh"]
